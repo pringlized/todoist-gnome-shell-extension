@@ -1,10 +1,16 @@
+// TODO:
+// - generic resource type loader
+// - load items and projects
+
 const St = imports.gi.St;
+const Gtk = imports.gi.Gtk;
 const Main = imports.ui.main;
 const Soup = imports.gi.Soup;
 const Lang = imports.lang;
 const Mainloop = imports.mainloop;
 const Clutter = imports.gi.Clutter;
 const PanelMenu = imports.ui.panelMenu;
+const PopupMenu = imports.ui.popupMenu;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Util = imports.misc.util;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -19,6 +25,11 @@ let _httpSession;
 let _syncToken;
 let _openItems;
 let _schema;
+let _projects;
+
+const MAX_LENGTH = 100;
+const KEY_RETURN = 65293;
+const KEY_ENTER  = 65421;
 
 const TodoistIndicator = new Lang.Class({
 		Name: 'Todoist.Indicator',
@@ -31,27 +42,115 @@ const TodoistIndicator = new Lang.Class({
 				y_align: Clutter.ActorAlign.CENTER
 			});
 			this.actor.add_actor(this.buttonText);
-			this.actor.connect('button-press-event', _openWebpage);
+
+			this._loadProjects();			
+			this._buildUI();
 			this._refresh();
 		},
 
 		_refresh: function () {
+			this._loadProjects();
 			this._loadData(this._refreshUI);
 			this._removeTimeout();
-			this._timeout = Mainloop.timeout_add_seconds(60, Lang.bind(this, this._refresh));
+			this._timeout = Mainloop.timeout_add_seconds(300, Lang.bind(this, this._refresh));	
+			
+			// Restore hint text
+			//this.newTask.hint_text = _("New task...");			
+
 			return true;
 		},
+
+		// Build popup ui
+		_buildUI: function (){
+			// Destroy previous box
+			if (this.mainBox != null)
+				this.mainBox.destroy();
+
+			// Create main box
+			this.mainBox = new St.BoxLayout();
+			this.mainBox.set_vertical(true);
+
+			// Create todos box
+			this.todosBox = new St.BoxLayout();
+			this.todosBox.set_vertical(true);
+
+			// Create todos scrollview
+			var scrollView = new St.ScrollView({style_class: 'vfade',
+				hscrollbar_policy: Gtk.PolicyType.NEVER,
+				vscrollbar_policy: Gtk.PolicyType.AUTOMATIC});
+			scrollView.add_actor(this.todosBox);
+			this.mainBox.add_actor(scrollView);
+
+			// Separator
+			var separator = new PopupMenu.PopupSeparatorMenuItem();
+			this.mainBox.add_actor(separator.actor);
+
+			// Add 'Update Now' menu item
+            let updateMenuItem = new PopupMenu.PopupMenuItem(_('Update Now'));
+			this.mainBox.add_actor(updateMenuItem.actor);
+            updateMenuItem.connect('activate', Lang.bind(this, function() {
+					this.menu.close();	
+					this._refresh();
+				})
+			);			
+						
+            // Add 'Settings' menu item to open settings
+            let settingsMenuItem = new PopupMenu.PopupMenuItem(_('Settings'));
+            this.mainBox.add_actor(settingsMenuItem.actor);
+            settingsMenuItem.connect('activate', Lang.bind(this, this._openSettings));
+
+			/*
+			// Text entry
+			this.newTask = new St.Entry(
+			{
+				name: "newTaskEntry",
+				hint_text: _("New task..."),
+				track_hover: true,
+				can_focus: true
+			});
+
+			let entryNewTask = this.newTask.clutter_text;
+			entryNewTask.set_max_length(MAX_LENGTH);
+			entryNewTask.connect('key-press-event', Lang.bind(this,function(o,e)
+			{
+				let symbol = e.get_key_symbol();
+				if (symbol == KEY_RETURN || symbol == KEY_ENTER)
+				{
+					this.menu.close();
+					//this.buttonText.set_text(_("(...)"));
+					//addTask(o.get_text(),this.filePath);
+					entryNewTask.set_text('');
+				}
+			}));
+
+			// Bottom section
+			var bottomSection = new PopupMenu.PopupMenuSection();
+			bottomSection.actor.add_actor(this.newTask);
+			bottomSection.actor.add_style_class_name("newTaskSection");
+			this.mainBox.add_actor(bottomSection.actor);
+			*/
+
+			this.menu.box.add(this.mainBox);
+		},	
+
+		_openSettings: function () {
+			Util.spawn([
+				"gnome-shell-extension-prefs",
+				Me.uuid
+			]);
+		},		
 
 		_loadData: function () {
 			let token = _schema.get_string('api-token');
 			let params = {
 				token: token,
-				sync_token: _syncToken,
+				sync_token: '*',
 				resource_types: '["items"]'	
 			}
 			_httpSession = new Soup.Session();
 			let message = Soup.form_request_new_from_hash('POST', URL, params);
 			_httpSession.queue_message(message, Lang.bind(this, function (_httpSession, message) {
+						log('TODOIST loadData status code: ' + message.status_code.toString());
 						if (message.status_code !== 200)
 							return;
 						let json = JSON.parse(message.response_body.data);
@@ -59,6 +158,83 @@ const TodoistIndicator = new Lang.Class({
 					}
 				)
 			);
+		},
+
+		_loadProjects: function() {
+			let token = _schema.get_string('api-token');
+			let params = {
+				token: token,
+				sync_token: '*',
+				resource_types: '["projects"]'	
+			}
+			_httpSession = new Soup.Session();
+			let message = Soup.form_request_new_from_hash('POST', URL, params);
+			_httpSession.queue_message(message, Lang.bind(this, function (_httpSession, message) {
+						log('TODOIST loadProjects status code: ' + message.status_code.toString());
+						if (message.status_code !== 200)
+							return;
+						let json = JSON.parse(message.response_body.data);
+						log('PROJECTS: '+JSON.stringify(json));
+						if (json.projects.length > 0) {
+							_projects = json.projects;
+						}
+					}
+				)
+			);		
+		},
+
+		_getProjectData: function(id) {
+			for (key in _projects) {
+				log(JSON.stringify(_projects[key]))			
+				if (_projects[key].id == id) {
+					log("FOUND PROJECT!!");
+					//log(JSON.stringify(_projects[key]))
+					return _projects[key];
+				}
+			}
+			return null;
+		},
+		
+		_completeItem: function(item) {
+			log('TODOIST sendComplete');			
+			log('TODOIST id:' + item.id.toString());
+			log('TODOIST content:' + item.content);
+			let token = _schema.get_string('api-token');
+
+			// data to complete an individual item
+			let commands = [{ 
+				type: "item_complete",
+          		uuid: this._guid(),
+          		args: { 
+					  ids: [item.id] 
+				} 
+			}];
+
+			// params
+			let params = {
+				token: token,
+				sync_token: _syncToken,
+				resource_types: '["items"]',			
+				commands: JSON.stringify(commands)
+			}
+
+			log('TODOIST sending:' + JSON.stringify(params));
+			_httpSession = new Soup.Session();
+			let message = Soup.form_request_new_from_hash('POST', URL, params);
+			log('TODOIST sendComplete code:' + message.status_code.toString());			
+			_httpSession.queue_message(message, Lang.bind(this, function (_httpSession, message) {	
+						log('TODOIST sendComplete code:' + message.status_code.toString());				
+						if (message.status_code !== 200) {
+							return;
+						}
+						let json = JSON.parse(message.response_body.data);
+						log('TODOIST sendComplete json data: ' + message.response_body.data);
+						// TODO: need to check for errors and log them					
+						// assuming all is good, refresh
+						this._refresh();
+					}
+				)
+			);						
 		},
 
 		_isDoneOrDeletedOrArchived: function (item) {
@@ -95,7 +271,7 @@ const TodoistIndicator = new Lang.Class({
 			}
 		},
 
-		_parseJson: function (data) {
+		_parseItemJson: function (data) {
 			_syncToken = data.sync_token;
 
 			let undoneItems = data.items.filter(this._isNotDone);
@@ -105,10 +281,116 @@ const TodoistIndicator = new Lang.Class({
 		},
 
 		_refreshUI: function (data) {
-			this._parseJson(data);
+			this._parseItemJson(data);
+
+			// Add all tasks to ui
+			this.todosBox.destroy_all_children();
+			let dueToday = _openItems.filter(Utils.isDueToday);
+			let pastDue = _openItems.filter(Utils.isPastDue);
+			let content = _openItems.filter(Utils.isDueDateInPast);
+			let tasks = 0;
+
+			// sort content
+			pastDue.sort(function (a, b) {
+				return a.day_order - b.day_order;
+			});	
+			dueToday.sort(function (a, b) {
+				return a.day_order - b.day_order;
+			});						
+
+			// list past due
+			if (pastDue.length > 0) {
+				let pastDueHeader = new St.Label({
+					text: 'PAST DUE',
+					style_class: 'todoist-header-past'
+				});			
+				this.todosBox.add(pastDueHeader);
+				for (let i=0; i<pastDue.length; i++)
+				{
+					let item = this._createItem(pastDue[i]);
+					this.todosBox.add(item.actor);
+					tasks += 1;
+				}
+				
+				// Separator
+				var separator = new PopupMenu.PopupSeparatorMenuItem();
+				this.todosBox.add(separator.actor);		
+			}
+
+			// list items due today
+			if (dueToday.length) {
+				let headerStyle = (pastDue.length == 0) ? 'todoist-header-today-padding' :  'todoist-header-today';
+				let dueTodayHeader = new St.Label({
+					text: 'TODAY',
+					style_class: headerStyle
+				});				
+				this.todosBox.add(dueTodayHeader);			
+
+				for (let i=0; i<dueToday.length; i++)
+				{
+					let item = this._createItem(dueToday[i]);
+					this.todosBox.add(item.actor);
+					tasks += 1;
+				}
+			}	
 			
 			let count = _openItems.filter(Utils.isDueDateInPast).length;
 			this.buttonText.set_text(this._getTextForTaskCount(count));
+		},
+
+		_createItem: function(data) {
+			// get necessary data
+			let itemId = data.id;
+			let projectId = data.project_id;
+			let dayOrder = data.day_order;
+			let task = data.content;				
+
+			// create new item for the content
+			let item = new PopupMenu.PopupMenuItem(task);
+			item.id = itemId;
+			item.content = data.content;
+			item.projectId = data.project_id;
+			item.dayOrderrder = data.day_order;
+
+			//TEST
+			let projectData = this._getProjectData(data.project_id);
+			let projectName = (projectData != null) ? projectData.name : data.project_id.toString();
+			let projectColorStyle = (projectData != null) ? 'todoist-project-color-'+projectData.color : 'todoist-project-color-none'
+			let projectLabel = new St.Label({
+				text: projectName,
+				style_class: 'todoist-item-project-name '+projectColorStyle
+			});
+			projectLabel.set_x_align(Clutter.ActorAlign.END);
+			projectLabel.set_x_expand(true);
+			projectLabel.set_y_expand(true);			
+			item.actor.add_child(projectLabel);		
+			
+			// Add the 'complete task' icon
+			let completeIcon = new St.Icon({
+				icon_name: 'object-select-symbolic',
+				style_class: 'system-status-icon'
+			});
+			let completeIcoBtn = new St.Button({
+				style_class: 'todoist-action-btn',
+				x_fill: true,
+				can_focus: true,
+				child: completeIcon
+			});
+			completeIcoBtn.set_x_align(Clutter.ActorAlign.END);
+			//completeIcoBtn.set_x_expand(true);
+			//completeIcoBtn.set_y_expand(true);
+
+			// add the icon button and connect click event
+			item.actor.add_child(completeIcoBtn);
+			item.completeIcoBtn = completeIcoBtn;
+			item.completePressId = completeIcoBtn.connect('button-press-event',
+				Lang.bind(this, function () {
+					//this.menu.close();
+					this._completeItem(item);
+				})
+			);
+
+			return item;
 		},
 
 		_removeTimeout: function () {
@@ -117,6 +399,16 @@ const TodoistIndicator = new Lang.Class({
 				this._timeout = null;
 			}
 		},
+
+		_guid: function() {
+			function s4() {
+				return Math.floor((1 + Math.random()) * 0x10000)
+				.toString(16)
+				.substring(1);
+			}
+			return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+				s4() + '-' + s4() + s4() + s4();
+		},	
 
 		stop: function () {
 			if (_httpSession !== undefined)
@@ -131,10 +423,6 @@ const TodoistIndicator = new Lang.Class({
 		}
 	}
 );
-
-function _openWebpage() {
-	Util.spawn(['xdg-open', 'https://todoist.com/app#agenda%2Foverdue%2C%20today'])
-}
 
 let todoistMenu;
 

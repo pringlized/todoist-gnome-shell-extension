@@ -7,3 +7,70 @@
     border-radius: 5px;
     padding: .5em;
 }
+
+.popup-menu-item .todoist-action-btn StIcon {
+    icon-size:16px;
+}
+
+.todoist-header-past {
+    padding-top: 20px;
+    padding-left: 18px;
+    color: red;
+    font-weight: bold;
+}
+.todoist-header-today-padding {
+    padding-top: 20px;  
+    padding-left: 18px;
+    color: #ffffff;
+    font-weight: bold;
+}
+.todoist-header-today {
+    padding-left: 18px;
+    color: #ffffff;
+    font-weight: bold;
+}
+.todoist-item-project-name {
+    padding-left: 30px;
+}
+.todoist-project-color-none {
+    color: #ffffff
+}
+.todoist-project-color-0 {
+    color: #95ef63
+}
+.todoist-project-color-1 {
+    color: #ff8581
+}
+.todoist-project-color-2 {
+    color: #ff8581
+}
+.todoist-project-color-3 {
+    color: #ffc471
+}
+.todoist-project-color-4 {
+    color: #f9ec75
+}
+.todoist-project-color-5 {
+    color: #a8c8e4
+}
+.todoist-project-color-6 {
+    color: #d2b8a3
+}
+.todoist-project-color-7 {
+    color: #cccccc
+}
+.todoist-project-color-8 {
+    color: #e2a8e4
+}
+.todoist-project-color-9 {
+    color: #fb886e
+}
+.todoist-project-color-10 {
+    color: #ffcc00
+}
+.todoist-project-color-11 {
+    color: #74e8d3
+}
+.todoist-project-color-12 {
+    color: #3bd5fb
+}
