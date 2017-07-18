@@ -1,7 +1,7 @@
 {
     "name": "Todoist", 
     "description": "Lists tasks from Todoist task manager", 
-    "shell-version": ["3.20.4"], 
-    "uuid": "todoist@ubuntudroid.gmail.com", 
+    "shell-version": ["3.24.2"], 
+    "uuid": "todoist@pringlized.gmail.com", 
     "settings-schema": "org.gnome.shell.extensions.todoist"
 }

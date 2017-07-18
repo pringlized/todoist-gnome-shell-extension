@@ -37,15 +37,7 @@ const TodoistPrefsWidget = new GObject.Class({
 
         let primaryText = _("You need to declare a valid API token to allow this extension to communicate with the \
 Todoist API on your behalf.\n\nYou can find your personal API token on Todoist's integration settings page at the very bottom.");
-        this.add(new Gtk.Label({ label: primaryText, wrap: true, xalign: 0 }));
-
-        let todoText = _("TODO Items:\n \
-- Add 'update duration' field in minutes here in settings\n \
-- redo line item to have project name and color dot\n \
-- figure out how to get sync_token working correcntly\n \
-- create a generic resource type loader\n \
-- load items and projects for project names");
-        this.add(new Gtk.Label({ label: todoText, wrap: true, xalign: 0 }));        
+        this.add(new Gtk.Label({ label: primaryText, wrap: true, xalign: 0 }));      
     }
 });
 
