@@ -1,10 +1,15 @@
 # Unofficial Todoist Gnome Shell extension
 
-This is an unofficial Gnome Shell extension which displays the number of currently open tasks in the top right corner of your Gnome Shell.
+This is an unofficial Gnome Shell extension to access and interact with Todoist items that are due.  I hacked this together in a day from [ubuntudroid's](https://github.com/ubuntudroid/todoist-gnome-shell-extension) code so it is a heavry work in progress currently when I have time.
 
-It has not yet been submitted to the Gnome Shell extension directory and might never be as this is more a playground for experimenting with Gnome Shell. However that might change in the future.
+It displays currently open tasks in the top right of your Gnome Shell. Upon clicking on it:
+* You'll see Overdue and Today items 
+* It displays their projects wih the appropiate color
+* Complete an item by clicking on the check mark
+* Update Now
+* View/edit settings
 
-Being an absolute beginner when it comes to programming for Gnome the extension's code has been heavily influenced by [this](http://smasue.github.io/gnome-shell-tw) and [this](http://www.mibus.org/2013/02/15/making-gnome-shell-plugins-save-their-config/) blogpost. Kudos to the authors! :)
+It is a forked from the great work by [ubuntudroid](https://github.com/ubuntudroid/todoist-gnome-shell-extension).  The original code was heavily influenced by [this](http://smasue.github.io/gnome-shell-tw) and [this](http://www.mibus.org/2013/02/15/making-gnome-shell-plugins-save-their-config/) blogpost. Thanks guys! :)
 
 ![Screenshot](assets/todoist-gnome-shell-extension.png?raw=true "Screenshot")
 
@@ -16,6 +21,18 @@ Clone the repository to `~./local/share/gnome-shell/extensions/` into a folder n
     
 The name of the directory is important because Gnome Shell won't recognize the extension otherwise.
 
-Then restart Gnome Shell (ALT-F2 and then 'r') and navigate to https://extensions.gnome.org/local/. You can enable the extension and specify your Todoist API token there.
+If you are running Wayland, you'll have to logout and log back in.  Otherwise restart Gnome Shell (ALT-F2 and then 'r') and navigate to https://extensions.gnome.org/local/. You can also open the Gnome Tweak Tool if you have that installed. You can enable the extension and specify your Todoist API token there.  Do a manual Update, or just wait 5 mintutes after updating your token
 
-Currently the extension syncs every 60 seconds, but I'll probably also make this configurable via the settings later. That means it could take up to one minute before the task count appears after setting the API token in the settings.
+#### Note:
+* It has not yet been submitted to the Gnome Shell extension directory.
+* I have not updated the metedata yet, so this will not be able to run if you have the original extension this was forked from installed.
+* Extension updates automatically every 5 minutes.
+
+#### Todo:
+* Add an update duration field to Settings
+* Sync token is set to *.  Update to do incremental updating
+* Enter new task for Today that takes #ProjectName
+* Drag and drop order
+* Display priority
+* Add project colors for Premium members
+* Edit button to: change due date, change project, edit notes, priority
