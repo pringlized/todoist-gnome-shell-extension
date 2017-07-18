@@ -18,7 +18,7 @@ It is a forked from the great work by [ubuntudroid](https://github.com/ubuntudro
 
 Clone the repository to `~./local/share/gnome-shell/extensions/` into a folder named `todoist@pringlized.gmail.com` using the following command:
 
-    git clone git@github.com:pringlized/todoist-gnome-shell-extension.git todoist@pringlized.gmail.com
+    git clone https://github.com/pringlized/todoist-gnome-shell-extension.git todoist@pringlized.gmail.com
     
 The name of the directory is important because Gnome Shell won't recognize the extension otherwise.
 
