@@ -23,6 +23,7 @@ const URL = 'https://todoist.com/API/v7/sync';
 
 let _httpSession;
 let _syncToken;
+let _completeSyncToken;
 let _openItems;
 let _schema;
 let _projects;
@@ -52,10 +53,7 @@ const TodoistIndicator = new Lang.Class({
 			this._loadProjects();
 			this._loadData(this._refreshUI);
 			this._removeTimeout();
-			this._timeout = Mainloop.timeout_add_seconds(300, Lang.bind(this, this._refresh));	
-			
-			// Restore hint text
-			//this.newTask.hint_text = _("New task...");			
+			this._timeout = Mainloop.timeout_add_seconds(300, Lang.bind(this, this._refresh));		
 
 			return true;
 		},
@@ -99,37 +97,6 @@ const TodoistIndicator = new Lang.Class({
             this.mainBox.add_actor(settingsMenuItem.actor);
             settingsMenuItem.connect('activate', Lang.bind(this, this._openSettings));
 
-			/*
-			// Text entry
-			this.newTask = new St.Entry(
-			{
-				name: "newTaskEntry",
-				hint_text: _("New task..."),
-				track_hover: true,
-				can_focus: true
-			});
-
-			let entryNewTask = this.newTask.clutter_text;
-			entryNewTask.set_max_length(MAX_LENGTH);
-			entryNewTask.connect('key-press-event', Lang.bind(this,function(o,e)
-			{
-				let symbol = e.get_key_symbol();
-				if (symbol == KEY_RETURN || symbol == KEY_ENTER)
-				{
-					this.menu.close();
-					//this.buttonText.set_text(_("(...)"));
-					//addTask(o.get_text(),this.filePath);
-					entryNewTask.set_text('');
-				}
-			}));
-
-			// Bottom section
-			var bottomSection = new PopupMenu.PopupMenuSection();
-			bottomSection.actor.add_actor(this.newTask);
-			bottomSection.actor.add_style_class_name("newTaskSection");
-			this.mainBox.add_actor(bottomSection.actor);
-			*/
-
 			this.menu.box.add(this.mainBox);
 		},	
 
@@ -144,16 +111,19 @@ const TodoistIndicator = new Lang.Class({
 			let token = _schema.get_string('api-token');
 			let params = {
 				token: token,
-				sync_token: '*',
+				sync_token: _syncToken,
 				resource_types: '["items"]'	
 			}
 			_httpSession = new Soup.Session();
 			let message = Soup.form_request_new_from_hash('POST', URL, params);
 			_httpSession.queue_message(message, Lang.bind(this, function (_httpSession, message) {
-						log('TODOIST loadData status code: ' + message.status_code.toString());
-						if (message.status_code !== 200)
+						if (message.status_code !== 200) {
+							log('TODOIST loadData failed with status code: ' + message.status_code.toString());
+							log('TODOIST loadData response_body: ' + message.response_body);
 							return;
+						}
 						let json = JSON.parse(message.response_body.data);
+						//log('TODOIST load tasks: ' + JSON.stringify(json.items.filter(Utils.isDueToday)));
 						this._refreshUI(json);
 					}
 				)
@@ -170,11 +140,13 @@ const TodoistIndicator = new Lang.Class({
 			_httpSession = new Soup.Session();
 			let message = Soup.form_request_new_from_hash('POST', URL, params);
 			_httpSession.queue_message(message, Lang.bind(this, function (_httpSession, message) {
-						log('TODOIST loadProjects status code: ' + message.status_code.toString());
-						if (message.status_code !== 200)
+						if (message.status_code !== 200) {
+							log('TODOIST loadProjects failed with status code: ' + message.status_code.toString());
+							log('TODOIST loadProjects response_body: ' + message.response_body);						
 							return;
+						}
 						let json = JSON.parse(message.response_body.data);
-						log('PROJECTS: '+JSON.stringify(json));
+						//log('PROJECTS: '+JSON.stringify(json));
 						if (json.projects.length > 0) {
 							_projects = json.projects;
 						}
@@ -184,21 +156,34 @@ const TodoistIndicator = new Lang.Class({
 		},
 
 		_getProjectData: function(id) {
-			for (key in _projects) {
-				log(JSON.stringify(_projects[key]))			
+			for (key in _projects) {		
 				if (_projects[key].id == id) {
-					log("FOUND PROJECT!!");
-					//log(JSON.stringify(_projects[key]))
 					return _projects[key];
 				}
 			}
 			return null;
 		},
+
+		/*
+		_removeItem: function(id) {
+			for (key in _openItems) {		
+				if (_openItems[key].id == id) {
+					_openItems.splice(key, 1);
+					return true;
+				}
+			}
+			return false;		
+		},
+		*/
 		
 		_completeItem: function(item) {
-			log('TODOIST sendComplete');			
-			log('TODOIST id:' + item.id.toString());
-			log('TODOIST content:' + item.content);
+			// HACK: destory the item for now to eliminate delay
+			// NOTE: below if the update fails, log the error
+			item.destroy();
+
+			//log('TODOIST sendComplete');			
+			//log('TODOIST id:' + item.id.toString());
+			//log('TODOIST content:' + item.content);
 			let token = _schema.get_string('api-token');
 
 			// data to complete an individual item
@@ -218,20 +203,20 @@ const TodoistIndicator = new Lang.Class({
 				commands: JSON.stringify(commands)
 			}
 
-			log('TODOIST sending:' + JSON.stringify(params));
+			//log('TODOIST sending:' + JSON.stringify(params));
 			_httpSession = new Soup.Session();
 			let message = Soup.form_request_new_from_hash('POST', URL, params);
-			log('TODOIST sendComplete code:' + message.status_code.toString());			
+			//log('TODOIST sendComplete code:' + message.status_code.toString());			
 			_httpSession.queue_message(message, Lang.bind(this, function (_httpSession, message) {	
-						log('TODOIST sendComplete code:' + message.status_code.toString());				
+						//log('TODOIST sendComplete code:' + message.status_code.toString());				
 						if (message.status_code !== 200) {
+							log('TODOIST completeItem failed with status code: ' + message.status_code.toString());
+							log('TODOIST completeItem response_body: ' + message.response_body);							
 							return;
 						}
 						let json = JSON.parse(message.response_body.data);
-						log('TODOIST sendComplete json data: ' + message.response_body.data);
-						// TODO: need to check for errors and log them					
-						// assuming all is good, refresh
-						this._refresh();
+						//log('TODOIST sendComplete json data: ' + message.response_body.data);
+						this._refreshUI(json);
 					}
 				)
 			);						
@@ -273,9 +258,11 @@ const TodoistIndicator = new Lang.Class({
 
 		_parseItemJson: function (data) {
 			_syncToken = data.sync_token;
+			//log("TODOIST parseItemJson:" + JSON.stringify(data));
 
 			let undoneItems = data.items.filter(this._isNotDone);
 			let doneItems = data.items.filter(this._isDoneOrDeletedOrArchived);
+			//log("TODOIST doneItems:" + JSON.stringify(doneItems));
 			undoneItems.forEach(this._addOrUpdate);
 			doneItems.forEach(this._removeIfInList);
 		},
@@ -352,7 +339,7 @@ const TodoistIndicator = new Lang.Class({
 			item.projectId = data.project_id;
 			item.dayOrderrder = data.day_order;
 
-			//TEST
+			// Get project name and color
 			let projectData = this._getProjectData(data.project_id);
 			let projectName = (projectData != null) ? projectData.name : data.project_id.toString();
 			let projectColorStyle = (projectData != null) ? 'todoist-project-color-'+projectData.color : 'todoist-project-color-none'
@@ -362,8 +349,8 @@ const TodoistIndicator = new Lang.Class({
 			});
 			projectLabel.set_x_align(Clutter.ActorAlign.END);
 			projectLabel.set_x_expand(true);
-			projectLabel.set_y_expand(true);			
-			item.actor.add_child(projectLabel);		
+			projectLabel.set_y_expand(true);
+			item.actor.add_child(projectLabel);
 			
 			// Add the 'complete task' icon
 			let completeIcon = new St.Icon({
@@ -428,6 +415,7 @@ let todoistMenu;
 
 function init() {
 	_syncToken = '*';
+	_completeSyncToken = '*';
 	_openItems = [];
 	_schema = Convenience.getSettings();
 }
