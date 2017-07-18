@@ -1,17 +1,18 @@
 # Unofficial Todoist Gnome Shell extension
 
-This is an unofficial Gnome Shell extension to access and interact with Todoist items that are due.  I hacked this together in a day from [ubuntudroid's](https://github.com/ubuntudroid/todoist-gnome-shell-extension) code so it is a heavry work in progress currently when I have time.
+This is an unofficial Gnome Shell extension to access and interact with Todoist items that are due.  I hacked this together in a day from [ubuntudroid's](https://github.com/ubuntudroid/todoist-gnome-shell-extension) code so it is a work in progress currently when I have time.
 
 It displays currently open tasks in the top right of your Gnome Shell. Upon clicking on it:
-* You'll see Overdue and Today items 
+* You'll see Overdue and Today items.
+* Items will be in their day's sorted order
 * It displays their projects wih the appropiate color
 * Complete an item by clicking on the check mark
 * Update Now
 * View/edit settings
 
-It is a forked from the great work by [ubuntudroid](https://github.com/ubuntudroid/todoist-gnome-shell-extension).  The original code was heavily influenced by [this](http://smasue.github.io/gnome-shell-tw) and [this](http://www.mibus.org/2013/02/15/making-gnome-shell-plugins-save-their-config/) blogpost. Thanks guys! :)
+It is a forked from the great work by [ubuntudroid](https://github.com/ubuntudroid/todoist-gnome-shell-extension).  The original code was heavily influenced by [this](http://smasue.github.io/gnome-shell-tw) & [this](http://www.mibus.org/2013/02/15/making-gnome-shell-plugins-save-their-config/) blogpost, and reading the source from [clipboard indicator](https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator) & [todolist](https://github.com/bsaleil/todolist-gnome-shell-extension). Thanks guys! :)
 
-![Screenshot](assets/todoist-gnome-shell-extension.png?raw=true "Screenshot")
+![Screenshot](assets/screenshot_dropdown.png?raw=true "Screenshot")
 
 # Setup
 
@@ -28,6 +29,9 @@ If you are running Wayland, you'll have to logout and log back in.  Otherwise re
 * I have not updated the metedata yet, so this will not be able to run if you have the original extension this was forked from installed.
 * Extension updates automatically every 5 minutes.
 
+#### Issues:
+* Sort order is not correct on update.  Todoist isn't returning items with changed order
+
 #### Todo:
 * Add an update duration field to Settings
 * Sync token is set to *.  Update to do incremental updating
@@ -36,3 +40,7 @@ If you are running Wayland, you'll have to logout and log back in.  Otherwise re
 * Display priority
 * Add project colors for Premium members
 * Edit button to: change due date, change project, edit notes, priority
+
+#### Resources:
+* [ST Referencal Manual](https://developer.gnome.org/st/3.24/)
+* [Soup API](https://people.gnome.org/~gcampagna/docs/Soup-2.4/index.html)
